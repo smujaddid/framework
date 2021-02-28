@@ -308,10 +308,12 @@ class Handler implements ExceptionHandlerContract
      */
     public function render($request, Throwable $e)
     {
-        if (method_exists($e, 'render') && $response = $e->render($request)) {
-            return Router::toResponse($request, $response);
-        } elseif ($e instanceof Responsable) {
-            return $e->toResponse($request);
+        if ($this->canRenderHttpResponse($e)) {
+            if (method_exists($e, 'render') && $response = $e->render($request)) {
+                return Router::toResponse($request, $response);
+            } elseif ($e instanceof Responsable) {
+                return $e->toResponse($request);
+            }
         }
 
         $e = $this->prepareException($this->mapException($e));
@@ -337,6 +339,17 @@ class Handler implements ExceptionHandlerContract
         return $request->expectsJson()
                     ? $this->prepareJsonResponse($request, $e)
                     : $this->prepareResponse($request, $e);
+    }
+
+    /**
+     * Check if the exception can render its HTTP response when available.
+     *
+     * @param  \Throwable  $e
+     * @return bool
+     */
+    protected function canRenderHttpResponse(Throwable $e)
+    {
+        return ! Arr::exists($this->exceptionMap, get_class($e));
     }
 
     /**
